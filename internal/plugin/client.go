@@ -72,8 +72,8 @@ func (g client) rule(m protoreflect.MethodDescriptor) (*annotations.HttpRule, bo
 }
 
 func (g client) client(s protoreflect.ServiceDescriptor) {
-	if loc := g.fd.SourceLocations().ByDescriptor(s); loc.LeadingComments != "" {
-		g.f.P(`/// `, strings.TrimSpace(loc.LeadingComments))
+	for _, comment := range g.comments(s) {
+		g.f.P(`///`, comment)
 	}
 	g.f.P(`abstract class `, s.Name(), `Client {`)
 
@@ -115,21 +115,19 @@ func (g client) client(s protoreflect.ServiceDescriptor) {
 	g.f.P("}")
 }
 
-func (g client) abstractMethod(m protoreflect.MethodDescriptor) {
-	loc := g.fd.SourceLocations().ByDescriptor(m)
-	if loc.LeadingComments != "" {
-		g.f.P(`  /// `, strings.TrimSpace(loc.LeadingComments))
-	}
+func (g client) comments(s protoreflect.Descriptor) []string {
+	loc := g.fd.SourceLocations().ByDescriptor(s)
+	return strings.Split(strings.TrimSuffix(loc.LeadingComments, "\n"), "\n")
+}
 
+func (g client) abstractMethod(m protoreflect.MethodDescriptor) {
+	for _, comment := range g.comments(m) {
+		g.f.P(`  ///`, comment)
+	}
 	g.f.P(`  Future<`, m.Output().Name(), `> `, firstCharLower(string(m.Name())), `(`, m.Input().Name(), ` request);`)
 }
 
 func (g client) method(m protoreflect.MethodDescriptor, rule *annotations.HttpRule) {
-	loc := g.fd.SourceLocations().ByDescriptor(m)
-	if loc.LeadingComments != "" {
-		g.f.P(`  /// `, strings.TrimSpace(loc.LeadingComments))
-	}
-
 	kind, path := fromRule(rule)
 
 	g.f.P(`  @override`)

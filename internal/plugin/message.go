@@ -30,8 +30,8 @@ func (g message) Generate() {
 }
 
 func (g message) message(m protoreflect.MessageDescriptor) {
-	if loc := g.fd.SourceLocations().ByDescriptor(m); loc.LeadingComments != "" {
-		g.f.P(`/// `, strings.TrimSpace(loc.LeadingComments))
+	for _, comment := range g.comments(m) {
+		g.f.P(`///`, comment)
 	}
 
 	g.f.P("@JsonSerializable()")
@@ -65,6 +65,11 @@ func (g message) message(m protoreflect.MessageDescriptor) {
 	g.f.P("}")
 }
 
+func (g message) comments(s protoreflect.Descriptor) []string {
+	loc := g.fd.SourceLocations().ByDescriptor(s)
+	return strings.Split(strings.TrimSuffix(loc.LeadingComments, "\n"), "\n")
+}
+
 func (g message) constructorField(fd protoreflect.FieldDescriptor) {
 	if fd.HasOptionalKeyword() {
 		g.f.P(`    this.`, fd.JSONName(), `,`)
@@ -74,9 +79,8 @@ func (g message) constructorField(fd protoreflect.FieldDescriptor) {
 }
 
 func (g message) field(fd protoreflect.FieldDescriptor) {
-	loc := g.fd.SourceLocations().ByDescriptor(fd)
-	if loc.LeadingComments != "" {
-		g.f.P(`  /// `, strings.TrimSpace(loc.LeadingComments))
+	for _, comment := range g.comments(fd) {
+		g.f.P(`  ///`, comment)
 	}
 
 	switch {
